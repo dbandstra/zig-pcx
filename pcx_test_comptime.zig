@@ -9,9 +9,10 @@ test "load pcx at compile time" {
     const input = @embedFile("space_merc.pcx");
     var slice_stream = std.io.SliceStream.init(input);
     var stream = &slice_stream.stream;
-    const preloaded = try pcx.preload(std.io.SliceStream.Error, stream);
+    const Loader = pcx.Loader(std.io.SliceStream.Error);
+    const preloaded = try Loader.preload(stream);
     var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-    try pcx.loadIntoRGB(std.io.SliceStream.Error, stream, &preloaded, rgb[0..]);
+    try Loader.loadIntoRGB(stream, &preloaded, rgb[0..]);
 
     var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
     util.convertToGreyscale(rgb, greyscale[0..]);

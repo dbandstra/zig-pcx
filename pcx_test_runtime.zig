@@ -8,9 +8,10 @@ test "load pcx at run time" {
   defer file.close();
   var file_stream = std.io.FileInStream.init(&file);
   var stream = &file_stream.stream;
-  const preloaded = try pcx.preload(std.io.FileInStream.Error, stream);
+  const Loader = pcx.Loader(std.io.FileInStream.Error);
+  const preloaded = try Loader.preload(stream);
   var rgb = try allocator.alloc(u8, preloaded.width * preloaded.height * 3);
-  try pcx.loadIntoRGB(std.io.FileInStream.Error, stream, &preloaded, rgb[0..]);
+  try Loader.loadIntoRGB(stream, &preloaded, rgb[0..]);
   defer allocator.free(rgb);
 
   var greyscale = try allocator.alloc(u8, preloaded.width * preloaded.height);
