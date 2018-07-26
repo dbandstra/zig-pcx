@@ -46,19 +46,22 @@ pub fn Loader(comptime ReadError: type) type {
       };
     }
 
-    pub fn loadIntoRGB(
+    pub fn loadIndexed(
       stream: *std.io.InStream(ReadError),
       preloaded: *const PreloadedInfo,
       out_buffer: []u8,
+      out_buffer_stride: usize,
+      out_palette: []u8,
     ) !void {
-      const width = preloaded.width;
-      const height = preloaded.height;
-      if (out_buffer.len < width * height * 3) {
+      if (out_palette.len < 768) {
         return error.PcxLoadFailed;
       }
-      // use stride when outputting indices, so we can convert to RGB in place
-      const stride = 3;
-      const datasize = width * height * 3;
+      const width = preloaded.width;
+      const height = preloaded.height;
+      if (out_buffer.len < width * height * out_buffer_stride) {
+        return error.PcxLoadFailed;
+      }
+      const datasize = width * height * out_buffer_stride;
 
       // load image data (1 byte per pixel)
       var out: usize = 0;
@@ -77,8 +80,11 @@ pub fn Loader(comptime ReadError: type) type {
           while (runlen > 0) {
             runlen -= 1;
             if (x < width) {
-              if (out >= datasize) return error.PcxLoadFailed;
-              out_buffer[out] = databyte; out += stride;
+              if (out >= datasize) {
+                return error.PcxLoadFailed;
+              }
+              out_buffer[out] = databyte;
+              out += out_buffer_stride;
             }
             x += 1;
           }
@@ -112,17 +118,23 @@ pub fn Loader(comptime ReadError: type) type {
       // the palette will either be completely contained in the current page; or
       // else its first part will be in the opposite page, and the rest in the
       // current page
-      var palette = page_bufs[which_page];
       const cur_page = pages[which_page];
       const opp_page = pages[which_page ^ 1];
       const cur_len = cur_page.len;
       const opp_len = 768 - cur_len;
-      std.mem.copyBackwards(u8, palette[opp_len..768], cur_page);
-      std.mem.copy(u8, palette[0..opp_len], opp_page[cur_len..768]);
+      std.mem.copy(u8, out_palette[0..opp_len], opp_page[cur_len..768]);
+      std.mem.copy(u8, out_palette[opp_len..768], cur_page);
+    }
 
-      // convert in place to true colour
+    pub fn loadIntoRGB(
+      stream: *std.io.InStream(ReadError),
+      preloaded: *const PreloadedInfo,
+      out_buffer: []u8,
+    ) !void {
+      var palette: [768]u8 = undefined;
+      try loadIndexed(stream, preloaded, out_buffer, 3, palette[0..]);
       var i: usize = 0;
-      while (i < width * height) : (i += 1) {
+      while (i < preloaded.width * preloaded.height) : (i += 1) {
         const index = out_buffer[i*3+0];
         out_buffer[i*3+0] = palette[index*3+0];
         out_buffer[i*3+1] = palette[index*3+1];
