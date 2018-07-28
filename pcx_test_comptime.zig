@@ -1,12 +1,12 @@
 const std = @import("std");
 const pcx = @import("pcx.zig");
-const util = @import("util.zig");
+const util = @import("testutil.zig");
 
 test "load pcx at compile time" {
   comptime {
     @setEvalBranchQuota(20000);
 
-    const input = @embedFile("space_merc.pcx");
+    const input = @embedFile("test/images/space_merc.pcx");
     var slice_stream = std.io.SliceStream.init(input);
     var stream = &slice_stream.stream;
     const Loader = pcx.Loader(std.io.SliceStream.Error);
