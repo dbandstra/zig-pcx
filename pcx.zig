@@ -197,7 +197,7 @@ pub fn Loader(comptime ReadError: type) type {
     pub fn loadRGBA(
       stream: *std.io.InStream(ReadError),
       preloaded: *const PreloadedInfo,
-      transparent_color_index: ?u8,
+      transparent_index: ?u8,
       out_buffer: []u8,
     ) !void {
       const num_pixels = usize(preloaded.width) * usize(preloaded.height);
@@ -214,7 +214,7 @@ pub fn Loader(comptime ReadError: type) type {
         out_buffer[i*4+1] = palette[index*3+1];
         out_buffer[i*4+2] = palette[index*3+2];
         out_buffer[i*4+3] =
-          if (transparent_color_index == index) u8(0) else u8(255);
+          if ((transparent_index orelse ~index) == index) u8(0) else u8(255);
       }
     }
   };
