@@ -1,7 +1,6 @@
 // some basic tests, just to make sure well formed images are handled
 
 const std = @import("std");
-const MemoryOutStream = @import("../testutil.zig").MemoryOutStream;
 const pcx = @import("../pcx.zig");
 
 var mem: [1000 * 1024]u8 = undefined;
@@ -16,9 +15,9 @@ fn test_load_comptime(
     @setEvalBranchQuota(branch_quota);
 
     const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
-    var slice_stream = std.io.SliceStream.init(pcxfile);
+    var slice_stream = std.io.SliceInStream.init(pcxfile);
     var stream = &slice_stream.stream;
-    const Loader = pcx.Loader(std.io.SliceStream.Error);
+    const Loader = pcx.Loader(std.io.SliceInStream.Error);
 
     const preloaded = try Loader.preload(stream);
     const width = usize(preloaded.width);
@@ -47,9 +46,9 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
   defer gfa.end_index = 0;
 
   const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
-  var slice_stream = std.io.SliceStream.init(pcxfile);
+  var slice_stream = std.io.SliceInStream.init(pcxfile);
   var stream = &slice_stream.stream;
-  const Loader = pcx.Loader(std.io.SliceStream.Error);
+  const Loader = pcx.Loader(std.io.SliceInStream.Error);
 
   const preloaded = try Loader.preload(stream);
   const width = usize(preloaded.width);
@@ -153,15 +152,15 @@ fn test_save(comptime basename: []const u8, w: usize, h: usize) !void {
   const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
 
   var outbuf: [pcxfile.len]u8 = undefined;
-  var mos = MemoryOutStream.init(outbuf[0..]);
-  var stream = &mos.stream;
-  const Saver = pcx.Saver(MemoryOutStream.WriteError);
+  var slice_stream = std.io.SliceOutStream.init(outbuf[0..]);
+  var stream = &slice_stream.stream;
+  const Saver = pcx.Saver(std.io.SliceOutStream.Error);
 
   try Saver.saveIndexed(stream, w, h,
     @embedFile("images/" ++ basename ++ "-raw-indexed.data"),
     @embedFile("images/" ++ basename ++ "-raw-indexed.data.pal"));
 
-  const result = mos.getSlice();
+  const result = slice_stream.getWritten();
 
   std.debug.assert(
     std.mem.eql(u8, result[0..12], pcxfile[0..12]) and

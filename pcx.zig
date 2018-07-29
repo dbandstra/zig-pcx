@@ -11,8 +11,9 @@ pub fn Loader(comptime ReadError: type) type {
     const Self = this;
 
     pub fn preload(stream: *std.io.InStream(ReadError)) !PreloadedInfo {
-      var header: [128]u8 = undefined;
+      var header: [70]u8 = undefined;
       _ = try stream.readNoEof(header[0..]);
+      try stream.skipBytes(58);
       const manufacturer = header[0];
       const version = header[1];
       if (manufacturer != 0x0a or version != 5) {
@@ -246,18 +247,18 @@ pub fn Saver(comptime WriteError: type) type {
       try stream.writeByte(5); // version
       try stream.writeByte(1); // encoding
       try stream.writeByte(8); // bits per pixel
-      try writeU16Le(stream, 0); // xmin
-      try writeU16Le(stream, 0); // ymin
-      try writeU16Le(stream, @intCast(u16, width - 1)); // xmax
-      try writeU16Le(stream, @intCast(u16, height - 1)); // ymax
-      try writeU16Le(stream, 0); // hres
-      try writeU16Le(stream, 0); // vres
-      try writeZeroes(stream, 48); // 16-color palette
+      try stream.writeIntLe(u16, 0); // xmin
+      try stream.writeIntLe(u16, 0); // ymin
+      try stream.writeIntLe(u16, @intCast(u16, width - 1)); // xmax
+      try stream.writeIntLe(u16, @intCast(u16, height - 1)); // ymax
+      try stream.writeIntLe(u16, 0); // hres
+      try stream.writeIntLe(u16, 0); // vres
+      try stream.writeByteNTimes(0, 48); // 16-color palette
       try stream.writeByte(0); // reserved
       try stream.writeByte(1); // color planes
-      try writeU16Le(stream, @intCast(u16, width)); // bytes per line
-      try writeU16Le(stream, 1); // palette type
-      try writeZeroes(stream, 58); // padding
+      try stream.writeIntLe(u16, @intCast(u16, width)); // bytes per line
+      try stream.writeIntLe(u16, 1); // palette type
+      try stream.writeByteNTimes(0, 58); // padding
 
       var y: usize = 0;
       while (y < height) : (y += 1) {
@@ -286,29 +287,6 @@ pub fn Saver(comptime WriteError: type) type {
 
       try stream.writeByte(0x0C);
       try stream.write(palette);
-    }
-
-    inline fn writeZeroes(
-      stream: *std.io.OutStream(WriteError),
-      num_bytes: usize,
-    ) !void {
-      const zeroes = [1]u8{0} ** 16;
-      var n = num_bytes;
-      while (n >= zeroes.len) : (n -= zeroes.len) {
-        try stream.write(zeroes[0..]);
-      }
-      if (num_bytes > 0) {
-        try stream.write(zeroes[0..n]);
-      }
-    }
-
-    // TODO - implement this in std...
-    inline fn writeU16Le(
-      stream: *std.io.OutStream(WriteError),
-      n: u16,
-    ) !void {
-      try stream.writeByte(@intCast(u8, n & 0xFF));
-      try stream.writeByte(@intCast(u8, (n >> 8) & 0xFF));
     }
   };
 }
