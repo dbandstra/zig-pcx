@@ -7,12 +7,12 @@ test "load pcx at compile time" {
     @setEvalBranchQuota(20000);
 
     const input = @embedFile("test/images/space_merc.pcx");
-    var slice_stream = std.io.SliceStream.init(input);
+    var slice_stream = std.io.SliceInStream.init(input);
     var stream = &slice_stream.stream;
-    const Loader = pcx.Loader(std.io.SliceStream.Error);
+    const Loader = pcx.Loader(std.io.SliceInStream.Error);
     const preloaded = try Loader.preload(stream);
     var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-    try Loader.loadIntoRGB(stream, &preloaded, rgb[0..]);
+    try Loader.loadRGB(stream, &preloaded, rgb[0..]);
 
     var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
     util.convertToGreyscale(rgb, greyscale[0..]);
