@@ -8,7 +8,7 @@ pub const PreloadedInfo = struct {
 
 pub fn Loader(comptime ReadError: type) type {
   return struct {
-    const Self = this;
+    const Self = @This();
 
     pub fn preload(stream: *std.io.InStream(ReadError)) !PreloadedInfo {
       var header: [70]u8 = undefined;
@@ -223,7 +223,7 @@ pub fn Loader(comptime ReadError: type) type {
 
 pub fn Saver(comptime WriteError: type) type {
   return struct{
-    const Self = this;
+    const Self = @This();
 
     pub fn saveIndexed(
       stream: *std.io.OutStream(WriteError),
