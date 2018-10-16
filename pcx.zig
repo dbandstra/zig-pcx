@@ -1,13 +1,13 @@
 const std = @import("std");
 
-pub const PreloadedInfo = struct {
+pub const PreloadedInfo = struct.{
   width: u16,
   height: u16,
   bytes_per_line: u16,
 };
 
 pub fn Loader(comptime ReadError: type) type {
-  return struct {
+  return struct.{
     const Self = @This();
 
     pub fn preload(stream: *std.io.InStream(ReadError)) !PreloadedInfo {
@@ -38,7 +38,7 @@ pub fn Loader(comptime ReadError: type) type {
           color_planes != 1) {
         return error.PcxLoadFailed;
       }
-      return PreloadedInfo{
+      return PreloadedInfo.{
         .width = xmax - xmin + 1,
         .height = ymax - ymin + 1,
         .bytes_per_line = bytes_per_line,
@@ -47,7 +47,7 @@ pub fn Loader(comptime ReadError: type) type {
 
     pub fn loadIndexed(
       stream: *std.io.InStream(ReadError),
-      preloaded: *const PreloadedInfo,
+      preloaded: PreloadedInfo,
       out_buffer: []u8,
       out_palette: []u8,
     ) !void {
@@ -56,7 +56,7 @@ pub fn Loader(comptime ReadError: type) type {
 
     pub fn loadIndexedWithStride(
       stream: *std.io.InStream(ReadError),
-      preloaded: *const PreloadedInfo,
+      preloaded: PreloadedInfo,
       out_buffer: []u8,
       out_buffer_stride: usize,
       out_palette: []u8,
@@ -176,7 +176,7 @@ pub fn Loader(comptime ReadError: type) type {
 
     pub fn loadRGB(
       stream: *std.io.InStream(ReadError),
-      preloaded: *const PreloadedInfo,
+      preloaded: PreloadedInfo,
       out_buffer: []u8,
     ) !void {
       const num_pixels = usize(preloaded.width) * usize(preloaded.height);
@@ -197,7 +197,7 @@ pub fn Loader(comptime ReadError: type) type {
 
     pub fn loadRGBA(
       stream: *std.io.InStream(ReadError),
-      preloaded: *const PreloadedInfo,
+      preloaded: PreloadedInfo,
       transparent_index: ?u8,
       out_buffer: []u8,
     ) !void {
@@ -222,7 +222,7 @@ pub fn Loader(comptime ReadError: type) type {
 }
 
 pub fn Saver(comptime WriteError: type) type {
-  return struct{
+  return struct.{
     const Self = @This();
 
     pub fn saveIndexed(

@@ -6,12 +6,12 @@ test "load pcx at run time" {
   const allocator = std.debug.global_allocator;
   var file = try std.os.File.openRead("test/images/space_merc.pcx");
   defer file.close();
-  var file_stream = std.io.FileInStream.init(&file);
+  var file_stream = std.os.File.inStream(file);
   var stream = &file_stream.stream;
-  const Loader = pcx.Loader(std.io.FileInStream.Error);
+  const Loader = pcx.Loader(std.os.File.InStream.Error);
   const preloaded = try Loader.preload(stream);
   var rgb = try allocator.alloc(u8, preloaded.width * preloaded.height * 3);
-  try Loader.loadRGB(stream, &preloaded, rgb[0..]);
+  try Loader.loadRGB(stream, preloaded, rgb[0..]);
   defer allocator.free(rgb);
 
   var greyscale = try allocator.alloc(u8, preloaded.width * preloaded.height);

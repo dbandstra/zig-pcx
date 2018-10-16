@@ -12,7 +12,7 @@ test "load pcx at compile time" {
     const Loader = pcx.Loader(std.io.SliceInStream.Error);
     const preloaded = try Loader.preload(stream);
     var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-    try Loader.loadRGB(stream, &preloaded, rgb[0..]);
+    try Loader.loadRGB(stream, preloaded, rgb[0..]);
 
     var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
     util.convertToGreyscale(rgb, greyscale[0..]);
