@@ -1,13 +1,13 @@
 const std = @import("std");
 
-pub const PreloadedInfo = struct.{
+pub const PreloadedInfo = struct{
   width: u16,
   height: u16,
   bytes_per_line: u16,
 };
 
 pub fn Loader(comptime ReadError: type) type {
-  return struct.{
+  return struct{
     const Self = @This();
 
     pub fn preload(stream: *std.io.InStream(ReadError)) !PreloadedInfo {
@@ -38,7 +38,7 @@ pub fn Loader(comptime ReadError: type) type {
           color_planes != 1) {
         return error.PcxLoadFailed;
       }
-      return PreloadedInfo.{
+      return PreloadedInfo{
         .width = xmax - xmin + 1,
         .height = ymax - ymin + 1,
         .bytes_per_line = bytes_per_line,
@@ -222,7 +222,7 @@ pub fn Loader(comptime ReadError: type) type {
 }
 
 pub fn Saver(comptime WriteError: type) type {
-  return struct.{
+  return struct{
     const Self = @This();
 
     pub fn saveIndexed(
