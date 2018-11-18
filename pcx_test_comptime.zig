@@ -28,6 +28,6 @@ test "load pcx at compile time" {
         string[i] = util.grey10[9 - quant]; i += 1;
       }
     }
-    @compileLog(string);
+    @compileError(string);
   }
 }

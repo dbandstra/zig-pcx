@@ -61,7 +61,7 @@ The implementation is contained in `pcx.zig`, which is a standalone file (it onl
 
 The basic test suite can be run with `zig test test/pcx_test.zig`.
 
-There are two additional toy "tests" which render an ASCII translation of an image. The comptime version writes it as a compile log message, the runtime version prints it as usual.
+There are two additional toy "tests" which render an ASCII translation of an image. The comptime version writes it as a compile error, the runtime version prints it as usual.
 
 ```
 zig test pcx_test_comptime.zig
