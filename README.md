@@ -13,9 +13,9 @@ Example:
 ```
 var file = try std.os.File.openRead("image.pcx");
 defer file.close();
-var file_stream = std.io.FileInStream.init(&file);
+var file_stream = std.os.File.inStream(file);
 var stream = &file_stream.stream;
-const Loader = pcx.Loader(std.io.FileInStream.Error);
+const Loader = pcx.Loader(std.os.File.InStream.Error);
 const preloaded = try Loader.preload(stream);
 const width = usize(preloaded.width);
 const height = usize(preloaded.height);
@@ -49,9 +49,9 @@ const pixels: [32 * 32]u8 = ...;
 
 var file = try std.os.File.openWrite("image.pcx");
 defer file.close();
-var file_stream = std.io.FileOutStream.init(&file);
+var file_stream = std.os.File.outStream(file);
 var stream = &file_stream.stream;
-const Saver = pcx.Saver(std.io.FileOutStream.Error);
+const Saver = pcx.Saver(std.os.File.OutStream.Error);
 
 try Saver.saveIndexed(stream, w, h, pixels[0..]);
 ```
