@@ -243,22 +243,32 @@ pub fn Saver(comptime WriteError: type) type {
         return error.PcxWriteFailed;
       }
       var i: usize = undefined;
-      try stream.writeByte(0x0a); // manufacturer
-      try stream.writeByte(5); // version
-      try stream.writeByte(1); // encoding
-      try stream.writeByte(8); // bits per pixel
-      try stream.writeIntLe(u16, 0); // xmin
-      try stream.writeIntLe(u16, 0); // ymin
-      try stream.writeIntLe(u16, @intCast(u16, width - 1)); // xmax
-      try stream.writeIntLe(u16, @intCast(u16, height - 1)); // ymax
-      try stream.writeIntLe(u16, 0); // hres
-      try stream.writeIntLe(u16, 0); // vres
-      try stream.writeByteNTimes(0, 48); // 16-color palette
-      try stream.writeByte(0); // reserved
-      try stream.writeByte(1); // color planes
-      try stream.writeIntLe(u16, @intCast(u16, width)); // bytes per line
-      try stream.writeIntLe(u16, 1); // palette type
-      try stream.writeByteNTimes(0, 58); // padding
+      const xmax = @intCast(u16, width - 1);
+      const ymax = @intCast(u16, height - 1);
+      const bytes_per_line = @intCast(u16, width);
+      const palette_type: u16 = 1;
+      var header: [128]u8 = undefined;
+      header[0] = 0x0a; // manufacturer
+      header[1] = 5; // version
+      header[2] = 1; // encoding
+      header[3] = 8; // bits per pixel
+      header[4] = 0; header[5] = 0; // xmin
+      header[6] = 0; header[7] = 0; // ymin
+      header[8] = @intCast(u8, xmax & 0xff);
+      header[9] = @intCast(u8, xmax >> 8);
+      header[10] = @intCast(u8, ymax & 0xff);
+      header[11] = @intCast(u8, ymax >> 8);
+      header[12] = 0; header[13] = 0; // hres
+      header[14] = 0; header[15] = 0; // vres
+      std.mem.set(u8, header[16..64], 0);
+      header[64] = 0; // reserved
+      header[65] = 1; // color planes
+      header[66] = @intCast(u8, bytes_per_line & 0xff);
+      header[67] = @intCast(u8, bytes_per_line >> 8);
+      header[68] = @intCast(u8, palette_type & 0xff);
+      header[69] = @intCast(u8, palette_type >> 8);
+      std.mem.set(u8, header[70..128], 0);
+      try stream.write(header);
 
       var y: usize = 0;
       while (y < height) : (y += 1) {
