@@ -1,7 +1,7 @@
 // some basic tests, just to make sure well formed images are handled
 
 const std = @import("std");
-const pcx = @import("../pcx.zig");
+const pcx = @import("pcx.zig");
 
 var mem: [1000 * 1024]u8 = undefined;
 var gfa = std.heap.FixedBufferAllocator.init(mem[0..]);
@@ -14,7 +14,7 @@ fn test_load_comptime(
   comptime {
     @setEvalBranchQuota(branch_quota);
 
-    const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
+    const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
     var slice_stream = std.io.SliceInStream.init(pcxfile);
     var stream = &slice_stream.stream;
     const Loader = pcx.Loader(std.io.SliceInStream.Error);
@@ -29,15 +29,15 @@ fn test_load_comptime(
       try Loader.loadIndexed(stream, preloaded, pixels[0..], palette[0..]);
 
       std.testing.expect(std.mem.eql(u8, pixels,
-        @embedFile("images/" ++ basename ++ "-raw-indexed.data")));
+        @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
       std.testing.expect(std.mem.eql(u8, palette,
-        @embedFile("images/" ++ basename ++ "-raw-indexed.data.pal")));
+        @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
     } else {
       var pixels: [width * height * 3]u8 = undefined;
       try Loader.loadRGB(stream, preloaded, pixels[0..]);
 
       std.testing.expect(std.mem.eql(u8, pixels,
-        @embedFile("images/" ++ basename ++ "-raw-r8g8b8.data")));
+        @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
     }
   }
 }
@@ -45,7 +45,7 @@ fn test_load_comptime(
 fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
   defer gfa.end_index = 0;
 
-  const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
+  const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
   var slice_stream = std.io.SliceInStream.init(pcxfile);
   var stream = &slice_stream.stream;
   const Loader = pcx.Loader(std.io.SliceInStream.Error);
@@ -60,15 +60,15 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
     try Loader.loadIndexed(stream, preloaded, pixels, palette[0..]);
 
     std.testing.expect(std.mem.eql(u8, pixels,
-      @embedFile("images/" ++ basename ++ "-raw-indexed.data")));
+      @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
     std.testing.expect(std.mem.eql(u8, palette,
-      @embedFile("images/" ++ basename ++ "-raw-indexed.data.pal")));
+      @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
   } else {
     var rgb = try gfa.allocator.alloc(u8, width * height * 3);
     try Loader.loadRGB(stream, preloaded, rgb);
 
     std.testing.expect(std.mem.eql(u8, rgb,
-      @embedFile("images/" ++ basename ++ "-raw-r8g8b8.data")));
+      @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
   }
 }
 
@@ -149,7 +149,7 @@ test "load lena64.pcx rgb runtime" {
 }
 
 fn test_save(comptime basename: []const u8, w: usize, h: usize) !void {
-  const pcxfile = @embedFile("images/" ++ basename ++ ".pcx");
+  const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
 
   var outbuf: [pcxfile.len]u8 = undefined;
   var slice_stream = std.io.SliceOutStream.init(outbuf[0..]);
@@ -157,8 +157,8 @@ fn test_save(comptime basename: []const u8, w: usize, h: usize) !void {
   const Saver = pcx.Saver(std.io.SliceOutStream.Error);
 
   try Saver.saveIndexed(stream, w, h,
-    @embedFile("images/" ++ basename ++ "-raw-indexed.data"),
-    @embedFile("images/" ++ basename ++ "-raw-indexed.data.pal"));
+    @embedFile("testdata/" ++ basename ++ "-raw-indexed.data"),
+    @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal"));
 
   const result = slice_stream.getWritten();
 

@@ -59,13 +59,13 @@ try Saver.saveIndexed(stream, w, h, pixels[0..]);
 ## The code
 The implementation is contained in `pcx.zig`, which is a standalone file (it only imports std).
 
-The basic test suite can be run with `zig test test/pcx_test.zig`.
+The basic test suite can be run with `zig test test.zig`.
 
-There are two additional toy "tests" which render an ASCII translation of an image. The comptime version writes it as a compile error, the runtime version prints it as usual.
+There are two additional "demo" tests which render an ASCII translation of an image. The comptime version writes it as a compile error, the runtime version prints it as usual.
 
 ```
-zig test pcx_test_comptime.zig
-zig test pcx_test_runtime.zig
+zig test demo_comptime.zig
+zig test demo_runtime.zig
 ```
 
 ### Credit

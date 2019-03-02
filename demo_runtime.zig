@@ -1,10 +1,10 @@
 const std = @import("std");
 const pcx = @import("pcx.zig");
-const util = @import("testutil.zig");
+const util = @import("demoutil.zig");
 
 test "load pcx at run time" {
   const allocator = std.debug.global_allocator;
-  var file = try std.os.File.openRead("test/images/space_merc.pcx");
+  var file = try std.os.File.openRead("testdata/space_merc.pcx");
   defer file.close();
   var file_stream = std.os.File.inStream(file);
   var stream = &file_stream.stream;
