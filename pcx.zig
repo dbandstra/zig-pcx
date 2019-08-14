@@ -49,7 +49,7 @@ pub fn Loader(comptime ReadError: type) type {
       stream: *std.io.InStream(ReadError),
       preloaded: PreloadedInfo,
       out_buffer: []u8,
-      out_palette: []u8,
+      out_palette: ?[]u8,
     ) !void {
       try loadIndexedWithStride(stream, preloaded, out_buffer, 1, out_palette);
     }
@@ -59,7 +59,7 @@ pub fn Loader(comptime ReadError: type) type {
       preloaded: PreloadedInfo,
       out_buffer: []u8,
       out_buffer_stride: usize,
-      out_palette: []u8,
+      out_palette: ?[]u8,
     ) !void {
       var input_buffer: [128]u8 = undefined;
       var input = input_buffer[0..0];
@@ -67,8 +67,10 @@ pub fn Loader(comptime ReadError: type) type {
       if (out_buffer_stride < 1) {
         return error.PcxLoadFailed;
       }
-      if (out_palette.len < 768) {
-        return error.PcxLoadFailed;
+      if (out_palette) |pal| {
+        if (pal.len < 768) {
+          return error.PcxLoadFailed;
+        }
       }
       const width = usize(preloaded.width);
       const height = usize(preloaded.height);
@@ -170,8 +172,10 @@ pub fn Loader(comptime ReadError: type) type {
       const opp_page = pages[which_page ^ 1];
       const cur_len = cur_page.len;
       const opp_len = 768 - cur_len;
-      std.mem.copy(u8, out_palette[0..opp_len], opp_page[cur_len..768]);
-      std.mem.copy(u8, out_palette[opp_len..768], cur_page);
+      if (out_palette) |pal| {
+        std.mem.copy(u8, pal[0..opp_len], opp_page[cur_len..768]);
+        std.mem.copy(u8, pal[opp_len..768], cur_page);
+      }
     }
 
     pub fn loadRGB(
