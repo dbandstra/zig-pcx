@@ -1,21 +1,44 @@
-Loading and saving 8-bit PCX images in Zig. Works both at compile-time and at run-time (although performance at compile time is not great; this should be improved in future versions of Zig).
+One-file library ([pcx.zig](pcx.zig)) for loading and saving 8-bit PCX images in Zig; works both at compile-time and at run-time.
 
 ## Loading
-Loading is split into two functions, both of which operate on a simple `InStream`.
+PCX images can be loaded from any `InStream`. The loading API has two stages: "preload" and "load".
 
-The first function, `preload`, reads the PCX header and returns some basic information including its width and height. The caller is then expected to prepare and provide a byte slice of the appropriate size to the second function, `loadIndexed`/`loadRGB`/`loadRGBA`.
+First, you call `preload`. This reads the PCX header and returns some basic information including its width and height (and some other things which are used internally).
 
-This separation allows the image library not to have to deal with allocators at all. The caller can provide heap-allocated memory, or simple a fixed-size static buffer (this is what makes the loader work at compile time).
-
-`loadIndexed` returns the indexed image data (1 byte per pixel), and a 256-colour palette. `loadRGB` is a convenience function which loads the image then applies the palette and returns RGB image data (3 bytes per pixel). `loadRGBA` is similar but takes an optional transparent color index and returns RGBA (4 bytes per pixel).
-
-Example:
+Preload function:
+```zig
+preload(stream: *InStream) !PreloadedInfo
 ```
-var file = try std.os.File.openRead("image.pcx");
+
+Then, if you want to proceed with decoding the image, you call one of the `load*` functions. You pass it the value returned by `preload`, as well as a byte slice with enough space to fit the decompressed image. (The caller is responsible for allocating this.)
+
+Load functions:
+```zig
+// loads the color index values into `out_buffer` without doing palette lookup.
+// if `out_palette` is supplied, loads the palette in RGB format.
+// `out_buffer` size should be `width * height` bytes.
+// `out_palette` size should be 768 bytes (256 colors of 3 bytes each).
+loadIndexed(stream: *InStream, preloaded: PreloadedInfo, out_buffer: []u8, out_palette: ?[]u8) !void
+
+// uses palette internally to resolve pixel colors.
+// `out_buffer` size should be `width * height * 3` bytes.
+loadRGB(stream: *InStream, preloaded: PreloadedInfo, out_buffer: []u8) !void
+
+// reads into an RGBA buffer. if you pass a `transparent_index`, pixels with
+// that value will given a 0 alpha value instead of 255.
+// `out_buffer` size should be `width * height * 4` bytes.
+loadRGBA(stream: *InStream, preloaded: PreloadedInfo, transparent_index: ?u8, out_buffer: []u8) !void
+```
+
+Note: the PCX format stores width and height as 16-bit integers. So be sure to upcast them to `usize` before multiplying them together, otherwise you'll get an overflow with images bigger than ~256x256.
+
+Example usage:
+```zig
+var file = try std.fs.File.openRead("image.pcx");
 defer file.close();
-var file_stream = std.os.File.inStream(file);
+var file_stream = std.fs.File.inStream(file);
 var stream = &file_stream.stream;
-const Loader = pcx.Loader(std.os.File.InStream.Error);
+const Loader = pcx.Loader(std.fs.File.InStream.Error);
 const preloaded = try Loader.preload(stream);
 const width = usize(preloaded.width);
 const height = usize(preloaded.height);
@@ -24,49 +47,62 @@ const height = usize(preloaded.height);
 var pixels = try allocator.alloc(u8, width * height);
 defer allocator.free(pixels);
 var palette: [768]u8 = undefined;
-try Loader.loadIndexed(stream, &preloaded, pixels, palette[0..]);
+try Loader.loadIndexed(stream, preloaded, pixels, palette[0..]);
 
-// load rgb:
+// or, load rgb:
 var pixels = try allocator.alloc(u8, width * height * 3);
 defer allocator.free(pixels);
-try Loader.loadRGB(stream, &preloaded, pixels);
+try Loader.loadRGB(stream, preloaded, pixels);
 
-// load rgba:
+// or, load rgba:
 var pixels = try allocator.alloc(u8, width * height * 4);
 defer allocator.free(pixels);
-const transparent = 255;
-try Loader.loadRGBA(stream, &preloaded, transparent, pixels);
+const transparent: ?u8 = 255;
+try Loader.loadRGBA(stream, preloaded, transparent, pixels);
+```
+
+Compile-time example:
+```zig
+const input = @embedFile("image.pcx");
+var slice_stream = std.io.SliceInStream.init(input);
+var stream = &slice_stream.stream;
+const Loader = pcx.Loader(std.io.SliceInStream.Error);
+const preloaded = try Loader.preload(stream);
+const width = usize(preloaded.width);
+const height = usize(preloaded.height);
+
+// no need to use allocators at compile-time
+var rgb: [width * height * 3]u8 = undefined;
+try Loader.loadRGB(stream, preloaded, rgb[0..]);
 ```
 
 ## Saving
-Saving is simpler, you simply provide an `OutStream` and an image buffer and palette (only indexed colour is supported), and it will written to the stream.
+Saving is simpler: you simply provide an `OutStream` and an image buffer and palette (only indexed color is supported), and it will be written to the stream.
 
 Example:
-```
+```zig
 const w = 32;
 const h = 32;
 const pixels: [32 * 32]u8 = ...;
 
-var file = try std.os.File.openWrite("image.pcx");
+var file = try std.fs.File.openWrite("image.pcx");
 defer file.close();
-var file_stream = std.os.File.outStream(file);
+var file_stream = std.fs.File.outStream(file);
 var stream = &file_stream.stream;
-const Saver = pcx.Saver(std.os.File.OutStream.Error);
+const Saver = pcx.Saver(std.fs.File.OutStream.Error);
 
 try Saver.saveIndexed(stream, w, h, pixels[0..]);
 ```
 
-## The code
-The implementation is contained in `pcx.zig`, which is a standalone file (it only imports std).
-
+## Tests and demos
 The basic test suite can be run with `zig test test.zig`.
 
-There are two additional "demo" tests which render an ASCII translation of an image. The comptime version writes it as a compile error, the runtime version prints it as usual.
+There are two additional "demo" programs which render an ASCII translation of a stock image. The comptime version renders it in the form of a compile error, the runtime version prints it to stderr.
 
 ```
-zig test demo_comptime.zig
-zig test demo_runtime.zig
+zig run demo_comptime.zig
+zig run demo_runtime.zig
 ```
 
 ### Credit
-Space merc image from https://opengameart.org/content/space-merc
+Space merc image (used in demos) from https://opengameart.org/content/space-merc
