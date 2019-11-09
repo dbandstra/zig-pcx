@@ -20,8 +20,8 @@ fn test_load_comptime(
         const Loader = pcx.Loader(std.io.SliceInStream.Error);
 
         const preloaded = try Loader.preload(stream);
-        const width = usize(preloaded.width);
-        const height = usize(preloaded.height);
+        const width: usize = preloaded.width;
+        const height: usize = preloaded.height;
 
         if (indexed) {
             var pixels: [width * height]u8 = undefined;
@@ -51,8 +51,8 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
     const Loader = pcx.Loader(std.io.SliceInStream.Error);
 
     const preloaded = try Loader.preload(stream);
-    const width = usize(preloaded.width);
-    const height = usize(preloaded.height);
+    const width: usize = preloaded.width;
+    const height: usize = preloaded.height;
 
     if (indexed) {
         var pixels = try gfa.allocator.alloc(u8, width * height);

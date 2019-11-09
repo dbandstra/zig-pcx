@@ -21,16 +21,16 @@ pub fn Loader(comptime ReadError: type) type {
             }
             const encoding = header[2];
             const bits_per_pixel = header[3];
-            const xmin = u16(header[4]) | (u16(header[5]) << 8);
-            const ymin = u16(header[6]) | (u16(header[7]) << 8);
-            const xmax = u16(header[8]) | (u16(header[9]) << 8);
-            const ymax = u16(header[10]) | (u16(header[11]) << 8);
-            const hres = u16(header[12]) | (u16(header[13]) << 8);
-            const vres = u16(header[14]) | (u16(header[15]) << 8);
+            const xmin = @as(u16, header[4]) | (@as(u16, header[5]) << 8);
+            const ymin = @as(u16, header[6]) | (@as(u16, header[7]) << 8);
+            const xmax = @as(u16, header[8]) | (@as(u16, header[9]) << 8);
+            const ymax = @as(u16, header[10]) | (@as(u16, header[11]) << 8);
+            const hres = @as(u16, header[12]) | (@as(u16, header[13]) << 8);
+            const vres = @as(u16, header[14]) | (@as(u16, header[15]) << 8);
             const reserved = header[64];
             const color_planes = header[65];
-            const bytes_per_line = u16(header[66]) | (u16(header[67]) << 8);
-            const palette_type = u16(header[68]) | (u16(header[69]) << 8);
+            const bytes_per_line = @as(u16, header[66]) | (@as(u16, header[67]) << 8);
+            const palette_type = @as(u16, header[68]) | (@as(u16, header[69]) << 8);
             if (encoding != 1 or
                 bits_per_pixel != 8 or
                 xmin > xmax or
@@ -72,8 +72,8 @@ pub fn Loader(comptime ReadError: type) type {
                     return error.PcxLoadFailed;
                 }
             }
-            const width = usize(preloaded.width);
-            const height = usize(preloaded.height);
+            const width: usize = preloaded.width;
+            const height: usize = preloaded.height;
             const datasize = width * height * out_buffer_stride;
             if (out_buffer.len < datasize) {
                 return error.PcxLoadFailed;
@@ -183,7 +183,7 @@ pub fn Loader(comptime ReadError: type) type {
             preloaded: PreloadedInfo,
             out_buffer: []u8,
         ) !void {
-            const num_pixels = usize(preloaded.width) * usize(preloaded.height);
+            const num_pixels = @as(usize, preloaded.width) * @as(usize, preloaded.height);
             if (out_buffer.len < num_pixels * 3) {
                 return error.PcxLoadFailed;
             }
@@ -191,7 +191,7 @@ pub fn Loader(comptime ReadError: type) type {
             try loadIndexedWithStride(stream, preloaded, out_buffer, 3, palette[0..]);
             var i: usize = 0;
             while (i < num_pixels) : (i += 1) {
-                const index = usize(out_buffer[i*3+0]);
+                const index: usize = out_buffer[i*3+0];
                 out_buffer[i*3+0] = palette[index*3+0];
                 out_buffer[i*3+1] = palette[index*3+1];
                 out_buffer[i*3+2] = palette[index*3+2];
