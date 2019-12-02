@@ -270,7 +270,7 @@ pub fn Saver(comptime WriteError: type) type {
             header[68] = @intCast(u8, palette_type & 0xff);
             header[69] = @intCast(u8, palette_type >> 8);
             std.mem.set(u8, header[70..128], 0);
-            try stream.write(header);
+            try stream.write(&header);
 
             var y: usize = 0;
             while (y < height) : (y += 1) {

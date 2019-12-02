@@ -26,17 +26,17 @@ fn test_load_comptime(
         if (indexed) {
             var pixels: [width * height]u8 = undefined;
             var palette: [768]u8 = undefined;
-            try Loader.loadIndexed(stream, preloaded, pixels[0..], palette[0..]);
+            try Loader.loadIndexed(stream, preloaded, &pixels, &palette);
 
-            std.testing.expect(std.mem.eql(u8, pixels,
+            std.testing.expect(std.mem.eql(u8, &pixels,
                 @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
-            std.testing.expect(std.mem.eql(u8, palette,
+            std.testing.expect(std.mem.eql(u8, &palette,
                 @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
         } else {
             var pixels: [width * height * 3]u8 = undefined;
-            try Loader.loadRGB(stream, preloaded, pixels[0..]);
+            try Loader.loadRGB(stream, preloaded, &pixels);
 
-            std.testing.expect(std.mem.eql(u8, pixels,
+            std.testing.expect(std.mem.eql(u8, &pixels,
                 @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
         }
     }
@@ -57,11 +57,11 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
     if (indexed) {
         var pixels = try gfa.allocator.alloc(u8, width * height);
         var palette: [768]u8 = undefined;
-        try Loader.loadIndexed(stream, preloaded, pixels, palette[0..]);
+        try Loader.loadIndexed(stream, preloaded, pixels, &palette);
 
         std.testing.expect(std.mem.eql(u8, pixels,
             @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
-        std.testing.expect(std.mem.eql(u8, palette,
+        std.testing.expect(std.mem.eql(u8, &palette,
             @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
     } else {
         var rgb = try gfa.allocator.alloc(u8, width * height * 3);

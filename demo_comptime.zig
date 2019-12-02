@@ -12,10 +12,10 @@ pub fn main() void {
         const Loader = pcx.Loader(std.io.SliceInStream.Error);
         const preloaded = try Loader.preload(stream);
         var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-        try Loader.loadRGB(stream, preloaded, rgb[0..]);
+        try Loader.loadRGB(stream, preloaded, &rgb);
 
         var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
-        util.convertToGreyscale(rgb, greyscale[0..]);
+        util.convertToGreyscale(&rgb, &greyscale);
         var string: [(preloaded.width+1)*preloaded.height]u8 = undefined;
         var i: usize = 0;
         var y: usize = 0;
@@ -28,6 +28,6 @@ pub fn main() void {
                 string[i] = util.grey10[9 - quant]; i += 1;
             }
         }
-        @compileError(string);
+        @compileError(&string);
     }
 }
