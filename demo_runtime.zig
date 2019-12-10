@@ -30,5 +30,5 @@ pub fn main() !void {
             string[i] = util.grey10[9 - quant]; i += 1;
         }
     }
-    std.debug.warn("{}\n", string);
+    std.debug.warn("{}\n", .{string});
 }
