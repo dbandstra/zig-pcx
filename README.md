@@ -40,14 +40,14 @@ var file_stream = std.fs.File.inStream(file);
 var stream = &file_stream.stream;
 const Loader = pcx.Loader(std.fs.File.InStream.Error);
 const preloaded = try Loader.preload(stream);
-const width = usize(preloaded.width);
-const height = usize(preloaded.height);
+const width: usize = preloaded.width;
+const height: usize = preloaded.height;
 
 // load indexed:
 var pixels = try allocator.alloc(u8, width * height);
 defer allocator.free(pixels);
 var palette: [768]u8 = undefined;
-try Loader.loadIndexed(stream, preloaded, pixels, palette[0..]);
+try Loader.loadIndexed(stream, preloaded, pixels, &palette);
 
 // or, load rgb:
 var pixels = try allocator.alloc(u8, width * height * 3);
@@ -63,17 +63,21 @@ try Loader.loadRGBA(stream, preloaded, transparent, pixels);
 
 Compile-time example:
 ```zig
-const input = @embedFile("image.pcx");
-var slice_stream = std.io.SliceInStream.init(input);
-var stream = &slice_stream.stream;
-const Loader = pcx.Loader(std.io.SliceInStream.Error);
-const preloaded = try Loader.preload(stream);
-const width = usize(preloaded.width);
-const height = usize(preloaded.height);
+comptime {
+    @setEvalBranchQuota(100000);
 
-// no need to use allocators at compile-time
-var rgb: [width * height * 3]u8 = undefined;
-try Loader.loadRGB(stream, preloaded, rgb[0..]);
+    const input = @embedFile("image.pcx");
+    var slice_stream = std.io.SliceInStream.init(input);
+    var stream = &slice_stream.stream;
+    const Loader = pcx.Loader(std.io.SliceInStream.Error);
+    const preloaded = try Loader.preload(stream);
+    const width: usize = preloaded.width;
+    const height: usize = preloaded.height;
+
+    // no need to use allocators at compile-time
+    var rgb: [width * height * 3]u8 = undefined;
+    try Loader.loadRGB(stream, preloaded, &rgb);
+}
 ```
 
 ## Saving
@@ -84,6 +88,7 @@ Example:
 const w = 32;
 const h = 32;
 const pixels: [32 * 32]u8 = ...;
+const palette: [768]u8 = ...;
 
 var file = try std.fs.File.openWrite("image.pcx");
 defer file.close();
@@ -91,7 +96,7 @@ var file_stream = std.fs.File.outStream(file);
 var stream = &file_stream.stream;
 const Saver = pcx.Saver(std.fs.File.OutStream.Error);
 
-try Saver.saveIndexed(stream, w, h, pixels[0..]);
+try Saver.saveIndexed(stream, w, h, &pixels, &palette);
 ```
 
 ## Tests and demos
