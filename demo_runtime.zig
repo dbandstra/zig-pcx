@@ -3,8 +3,8 @@ const pcx = @import("pcx.zig");
 const util = @import("demoutil.zig");
 
 pub fn main() !void {
-    const allocator = std.debug.global_allocator;
-    var file = try std.fs.File.openRead("testdata/space_merc.pcx");
+    const allocator = std.testing.allocator;
+    var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});
     defer file.close();
     var file_stream = std.fs.File.inStream(file);
     var stream = &file_stream.stream;
