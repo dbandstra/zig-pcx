@@ -6,12 +6,11 @@ pub fn main() !void {
     const allocator = std.testing.allocator;
     var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});
     defer file.close();
-    var file_stream = std.fs.File.inStream(file);
-    var stream = &file_stream.stream;
-    const Loader = pcx.Loader(std.fs.File.InStream.Error);
-    const preloaded = try Loader.preload(stream);
+    var stream = std.fs.File.inStream(file);
+    const Loader = pcx.Loader(@TypeOf(stream));
+    const preloaded = try Loader.preload(&stream);
     var rgb = try allocator.alloc(u8, preloaded.width * preloaded.height * 3);
-    try Loader.loadRGB(stream, preloaded, rgb[0..]);
+    try Loader.loadRGB(&stream, preloaded, rgb);
     defer allocator.free(rgb);
 
     var greyscale = try allocator.alloc(u8, preloaded.width * preloaded.height);

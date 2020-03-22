@@ -7,12 +7,11 @@ pub fn main() void {
         @setEvalBranchQuota(20000);
 
         const input = @embedFile("testdata/space_merc.pcx");
-        var slice_stream = std.io.SliceInStream.init(input);
-        var stream = &slice_stream.stream;
-        const Loader = pcx.Loader(std.io.SliceInStream.Error);
-        const preloaded = try Loader.preload(stream);
+        var stream = std.io.fixedBufferStream(input).inStream();
+        const Loader = pcx.Loader(@TypeOf(stream));
+        const preloaded = try Loader.preload(&stream);
         var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-        try Loader.loadRGB(stream, preloaded, &rgb);
+        try Loader.loadRGB(&stream, preloaded, &rgb);
 
         var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
         util.convertToGreyscale(&rgb, &greyscale);

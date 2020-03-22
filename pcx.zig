@@ -6,11 +6,11 @@ pub const PreloadedInfo = struct {
     bytes_per_line: u16,
 };
 
-pub fn Loader(comptime ReadError: type) type {
+pub fn Loader(comptime InStream: type) type {
     return struct {
         const Self = @This();
 
-        pub fn preload(stream: *std.io.InStream(ReadError)) !PreloadedInfo {
+        pub fn preload(stream: *InStream) !PreloadedInfo {
             var header: [70]u8 = undefined;
             _ = try stream.readNoEof(header[0..]);
             try stream.skipBytes(58);
@@ -46,7 +46,7 @@ pub fn Loader(comptime ReadError: type) type {
         }
 
         pub fn loadIndexed(
-            stream: *std.io.InStream(ReadError),
+            stream: *InStream,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
             out_palette: ?[]u8,
@@ -55,14 +55,14 @@ pub fn Loader(comptime ReadError: type) type {
         }
 
         pub fn loadIndexedWithStride(
-            stream: *std.io.InStream(ReadError),
+            stream: *InStream,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
             out_buffer_stride: usize,
             out_palette: ?[]u8,
         ) !void {
             var input_buffer: [128]u8 = undefined;
-            var input = input_buffer[0..0];
+            var input: []u8 = input_buffer[0..0];
 
             if (out_buffer_stride < 1) {
                 return error.PcxLoadFailed;
@@ -179,7 +179,7 @@ pub fn Loader(comptime ReadError: type) type {
         }
 
         pub fn loadRGB(
-            stream: *std.io.InStream(ReadError),
+            stream: *InStream,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
         ) !void {
@@ -199,7 +199,7 @@ pub fn Loader(comptime ReadError: type) type {
         }
 
         pub fn loadRGBA(
-            stream: *std.io.InStream(ReadError),
+            stream: *InStream,
             preloaded: PreloadedInfo,
             transparent_index: ?u8,
             out_buffer: []u8,
@@ -223,17 +223,26 @@ pub fn Loader(comptime ReadError: type) type {
     };
 }
 
-pub fn Saver(comptime WriteError: type) type {
+pub fn Saver(comptime OutStream: type) type {
     return struct {
         const Self = @This();
 
+        stream: *OutStream,
+
+        pub fn init(stream: *OutStream) Self {
+            return .{
+                .stream = stream,
+            };
+        }
+
         pub fn saveIndexed(
-            stream: *std.io.OutStream(WriteError),
+            self: Self,
             width: usize,
             height: usize,
             pixels: []const u8,
             palette: []const u8,
         ) !void {
+            const stream = self.stream;
             if (
                 width < 1 or
                 width > 65535 or
@@ -270,7 +279,7 @@ pub fn Saver(comptime WriteError: type) type {
             header[68] = @intCast(u8, palette_type & 0xff);
             header[69] = @intCast(u8, palette_type >> 8);
             std.mem.set(u8, header[70..128], 0);
-            try stream.write(&header);
+            try stream.writeAll(&header);
 
             var y: usize = 0;
             while (y < height) : (y += 1) {
@@ -298,7 +307,21 @@ pub fn Saver(comptime WriteError: type) type {
             }
 
             try stream.writeByte(0x0C);
-            try stream.write(palette);
+            try stream.writeAll(palette);
         }
     };
+}
+
+pub fn saver(stream: var) Saver(
+    switch (@typeInfo(@TypeOf(stream))) {
+        .Pointer => |p| p.child,
+        else => @compileError("saver: stream must be a pointer"),
+    }
+) {
+    return Saver(
+        switch (@typeInfo(@TypeOf(stream))) {
+            .Pointer => |p| p.child,
+            else => unreachable,
+        }
+    ).init(stream);
 }
