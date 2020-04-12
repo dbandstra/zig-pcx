@@ -7,7 +7,8 @@ pub fn main() void {
         @setEvalBranchQuota(20000);
 
         const input = @embedFile("testdata/space_merc.pcx");
-        var stream = std.io.fixedBufferStream(input).inStream();
+        var fbs = std.io.fixedBufferStream(input);
+        var stream = fbs.inStream();
         const Loader = pcx.Loader(@TypeOf(stream));
         const preloaded = try Loader.preload(&stream);
         var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;

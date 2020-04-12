@@ -15,7 +15,8 @@ fn test_load_comptime(
         @setEvalBranchQuota(branch_quota);
 
         const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
-        var stream = std.io.fixedBufferStream(pcxfile).inStream();
+        var fbs = std.io.fixedBufferStream(pcxfile);
+        var stream = fbs.inStream();
         const Loader = pcx.Loader(@TypeOf(stream));
 
         const preloaded = try Loader.preload(&stream);
