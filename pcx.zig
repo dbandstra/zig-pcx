@@ -35,10 +35,11 @@ pub fn Loader(comptime InStream: type) type {
                 bits_per_pixel != 8 or
                 xmin > xmax or
                 ymin > ymax or
-                color_planes != 1) {
+                color_planes != 1)
+            {
                 return error.PcxLoadFailed;
             }
-            return PreloadedInfo {
+            return PreloadedInfo{
                 .width = xmax - xmin + 1,
                 .height = ymax - ymin + 1,
                 .bytes_per_line = bytes_per_line,
@@ -191,10 +192,10 @@ pub fn Loader(comptime InStream: type) type {
             try loadIndexedWithStride(stream, preloaded, out_buffer, 3, palette[0..]);
             var i: usize = 0;
             while (i < num_pixels) : (i += 1) {
-                const index: usize = out_buffer[i*3+0];
-                out_buffer[i*3+0] = palette[index*3+0];
-                out_buffer[i*3+1] = palette[index*3+1];
-                out_buffer[i*3+2] = palette[index*3+2];
+                const index: usize = out_buffer[i * 3 + 0];
+                out_buffer[i * 3 + 0] = palette[index * 3 + 0];
+                out_buffer[i * 3 + 1] = palette[index * 3 + 1];
+                out_buffer[i * 3 + 2] = palette[index * 3 + 2];
             }
         }
 
@@ -212,11 +213,11 @@ pub fn Loader(comptime InStream: type) type {
             try loadIndexedWithStride(stream, preloaded, out_buffer, 4, palette[0..]);
             var i: usize = 0;
             while (i < num_pixels) : (i += 1) {
-                const index = usize(out_buffer[i*4+0]);
-                out_buffer[i*4+0] = palette[index*3+0];
-                out_buffer[i*4+1] = palette[index*3+1];
-                out_buffer[i*4+2] = palette[index*3+2];
-                out_buffer[i*4+3] =
+                const index = usize(out_buffer[i * 4 + 0]);
+                out_buffer[i * 4 + 0] = palette[index * 3 + 0];
+                out_buffer[i * 4 + 1] = palette[index * 3 + 1];
+                out_buffer[i * 4 + 2] = palette[index * 3 + 2];
+                out_buffer[i * 4 + 3] =
                     if ((transparent_index orelse ~index) == index) u8(0) else u8(255);
             }
         }
@@ -243,14 +244,13 @@ pub fn Saver(comptime OutStream: type) type {
             palette: []const u8,
         ) !void {
             const stream = self.stream;
-            if (
-                width < 1 or
+            if (width < 1 or
                 width > 65535 or
                 height < 1 or
                 height > 65535 or
                 pixels.len < width * height or
-                palette.len != 768
-            ) {
+                palette.len != 768)
+            {
                 return error.PcxWriteFailed;
             }
             var i: usize = undefined;
@@ -263,14 +263,18 @@ pub fn Saver(comptime OutStream: type) type {
             header[1] = 5; // version
             header[2] = 1; // encoding
             header[3] = 8; // bits per pixel
-            header[4] = 0; header[5] = 0; // xmin
-            header[6] = 0; header[7] = 0; // ymin
+            header[4] = 0;
+            header[5] = 0; // xmin
+            header[6] = 0;
+            header[7] = 0; // ymin
             header[8] = @intCast(u8, xmax & 0xff);
             header[9] = @intCast(u8, xmax >> 8);
             header[10] = @intCast(u8, ymax & 0xff);
             header[11] = @intCast(u8, ymax >> 8);
-            header[12] = 0; header[13] = 0; // hres
-            header[14] = 0; header[15] = 0; // vres
+            header[12] = 0;
+            header[13] = 0; // hres
+            header[14] = 0;
+            header[15] = 0; // vres
             std.mem.set(u8, header[16..64], 0);
             header[64] = 0; // reserved
             header[65] = 1; // color planes
@@ -283,7 +287,7 @@ pub fn Saver(comptime OutStream: type) type {
 
             var y: usize = 0;
             while (y < height) : (y += 1) {
-                const row = pixels[y * width..(y + 1) * width];
+                const row = pixels[y * width .. (y + 1) * width];
                 var x: usize = 0;
                 while (x < width) {
                     const index = row[x];
@@ -312,16 +316,12 @@ pub fn Saver(comptime OutStream: type) type {
     };
 }
 
-pub fn saver(stream: var) Saver(
-    switch (@typeInfo(@TypeOf(stream))) {
+pub fn saver(stream: anytype) Saver(switch (@typeInfo(@TypeOf(stream))) {
+    .Pointer => |p| p.child,
+    else => @compileError("saver: stream must be a pointer"),
+}) {
+    return Saver(switch (@typeInfo(@TypeOf(stream))) {
         .Pointer => |p| p.child,
-        else => @compileError("saver: stream must be a pointer"),
-    }
-) {
-    return Saver(
-        switch (@typeInfo(@TypeOf(stream))) {
-            .Pointer => |p| p.child,
-            else => unreachable,
-        }
-    ).init(stream);
+        else => unreachable,
+    }).init(stream);
 }
