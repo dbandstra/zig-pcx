@@ -13,7 +13,7 @@ pub fn Loader(comptime InStream: type) type {
         pub fn preload(stream: *InStream) !PreloadedInfo {
             var header: [70]u8 = undefined;
             _ = try stream.readNoEof(header[0..]);
-            try stream.skipBytes(58);
+            try stream.skipBytes(58, .{});
             const manufacturer = header[0];
             const version = header[1];
             if (manufacturer != 0x0a or version != 5) {
