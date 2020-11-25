@@ -1,5 +1,7 @@
 One-file library ([pcx.zig](pcx.zig)) for loading and saving 8-bit PCX images in Zig; works both at compile-time and at run-time.
 
+Requires Zig 0.7.0.
+
 ## Loading
 PCX images can be loaded from any `InStream`. The loading API has two stages: "preload" and "load".
 
