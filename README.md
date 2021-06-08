@@ -7,8 +7,7 @@ Requires Zig 0.8.0.
 
 ## Loading
 
-PCX images can be loaded from any `Reader`. The loading API has two stages:
-"preload" and "load".
+The loading API has two stages: "preload" and "load".
 
 First, you call `preload`. This reads the PCX header and returns some basic
 information including its width and height (and some other things which are
@@ -17,10 +16,14 @@ used internally).
 Preload function:
 
 ```zig
-preload(reader: *Reader) !PreloadedInfo
+preload(reader: anytype) !PreloadedInfo
 ```
 
-Then, if you want to proceed with decoding the image, you call one of the
+Note: In all these functions, `reader` is anything that fulfills the
+`std.io.Reader` interface. You don't need to pass a pointer to a reader
+because readers usually box their own pointers.
+
+Now, if you want to proceed with decoding the image, you call one of the
 `load*` functions. You pass it the value returned by `preload`, as well as a
 byte slice with enough space to fit the decompressed image. (The caller is
 responsible for allocating this.)
@@ -32,16 +35,16 @@ Load functions:
 // if `out_palette` is supplied, loads the palette in RGB format.
 // `out_buffer` size should be `width * height` bytes.
 // `out_palette` size should be 768 bytes (256 colors of 3 bytes each).
-loadIndexed(reader: *Reader, preloaded: PreloadedInfo, out_buffer: []u8, out_palette: ?[]u8) !void
+loadIndexed(reader: anytype, preloaded: PreloadedInfo, out_buffer: []u8, out_palette: ?[]u8) !void
 
 // uses palette internally to resolve pixel colors.
 // `out_buffer` size should be `width * height * 3` bytes.
-loadRGB(reader: *Reader, preloaded: PreloadedInfo, out_buffer: []u8) !void
+loadRGB(reader: anytype, preloaded: PreloadedInfo, out_buffer: []u8) !void
 
 // reads into an RGBA buffer. if you pass a `transparent_index`, pixels with
 // that value will given a 0 alpha value instead of 255.
 // `out_buffer` size should be `width * height * 4` bytes.
-loadRGBA(reader: *Reader, preloaded: PreloadedInfo, transparent_index: ?u8, out_buffer: []u8) !void
+loadRGBA(reader: anytype, preloaded: PreloadedInfo, transparent_index: ?u8, out_buffer: []u8) !void
 ```
 
 Note: the PCX format stores width and height as 16-bit integers. So be sure
@@ -53,9 +56,10 @@ Example usage:
 ```zig
 var file = try std.fs.cwd().openFile("image.pcx", .{});
 defer file.close();
+
 var reader = file.reader();
-const Loader = pcx.Loader(@TypeOf(reader));
-const preloaded = try Loader.preload(&reader);
+
+const preloaded = try pcx.preload(reader);
 const width: usize = preloaded.width;
 const height: usize = preloaded.height;
 
@@ -63,18 +67,18 @@ const height: usize = preloaded.height;
 var pixels = try allocator.alloc(u8, width * height);
 defer allocator.free(pixels);
 var palette: [768]u8 = undefined;
-try Loader.loadIndexed(&reader, preloaded, pixels, &palette);
+try pcx.loadIndexed(reader, preloaded, pixels, &palette);
 
 // or, load rgb:
 var pixels = try allocator.alloc(u8, width * height * 3);
 defer allocator.free(pixels);
-try Loader.loadRGB(&reader, preloaded, pixels);
+try pcx.loadRGB(reader, preloaded, pixels);
 
 // or, load rgba:
 var pixels = try allocator.alloc(u8, width * height * 4);
 defer allocator.free(pixels);
 const transparent: ?u8 = 255;
-try Loader.loadRGBA(&reader, preloaded, transparent, pixels);
+try pcx.loadRGBA(reader, preloaded, transparent, pixels);
 ```
 
 Compile-time example:
@@ -86,22 +90,20 @@ comptime {
     const input = @embedFile("image.pcx");
     var fbs = std.io.fixedBufferStream(input);
     var reader = fbs.reader();
-    const Loader = pcx.Loader(@TypeOf(reader));
-    const preloaded = try Loader.preload(&reader);
+
+    const preloaded = try pcx.preload(reader);
     const width: usize = preloaded.width;
     const height: usize = preloaded.height;
 
     // no need to use allocators at compile-time
     var rgb: [width * height * 3]u8 = undefined;
-    try Loader.loadRGB(&reader, preloaded, &rgb);
+    try pcx.loadRGB(reader, preloaded, &rgb);
 }
 ```
 
 ## Saving
 
-Saving is simpler: you simply provide an `Writer` and an image buffer and
-palette (only indexed color is supported), and it will be written to the
-stream.
+Only saving to indexed color is supported.
 
 Example:
 
@@ -113,15 +115,13 @@ const palette: [768]u8 = ...;
 
 var file = try std.fs.cwd().createFile("image.pcx", .{});
 defer file.close();
-var writer = file.writer();
-const Saver = pcx.saver(&writer);
 
-try saver.saveIndexed(w, h, &pixels, &palette);
+try pcx.saveIndexed(file.writer(), w, h, &pixels, &palette);
 ```
 
 ## Tests and demos
 
-The basic test suite can be run with `zig test test.zig`.
+The basic test suite can be run with `zig test pcx_test.zig`.
 
 There are two additional "demo" programs which render an ASCII translation of
 a stock image. The comptime version renders it in the form of a compile

@@ -8,11 +8,11 @@ pub fn main() void {
 
         const input = @embedFile("testdata/space_merc.pcx");
         var fbs = std.io.fixedBufferStream(input);
-        var stream = fbs.reader();
-        const Loader = pcx.Loader(@TypeOf(stream));
-        const preloaded = try Loader.preload(&stream);
+        var reader = fbs.reader();
+
+        const preloaded = try pcx.preload(reader);
         var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
-        try Loader.loadRGB(&stream, preloaded, &rgb);
+        try pcx.loadRGB(reader, preloaded, &rgb);
 
         var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
         util.convertToGreyscale(&rgb, &greyscale);

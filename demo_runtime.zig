@@ -4,13 +4,15 @@ const util = @import("demoutil.zig");
 
 pub fn main() !void {
     const allocator = std.testing.allocator;
+
     var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});
     defer file.close();
-    var stream = std.fs.File.reader(file);
-    const Loader = pcx.Loader(@TypeOf(stream));
-    const preloaded = try Loader.preload(&stream);
+
+    var reader = file.reader();
+
+    const preloaded = try pcx.preload(reader);
     var rgb = try allocator.alloc(u8, preloaded.width * preloaded.height * 3);
-    try Loader.loadRGB(&stream, preloaded, rgb);
+    try pcx.loadRGB(reader, preloaded, rgb);
     defer allocator.free(rgb);
 
     var greyscale = try allocator.alloc(u8, preloaded.width * preloaded.height);
