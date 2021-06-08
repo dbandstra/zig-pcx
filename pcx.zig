@@ -8,7 +8,7 @@ pub const PreloadedInfo = struct {
 
 pub fn preload(reader: anytype) !PreloadedInfo {
     var header: [70]u8 = undefined;
-    _ = try reader.readNoEof(header[0..]);
+    _ = try reader.readNoEof(&header);
     try reader.skipBytes(58, .{});
     const manufacturer = header[0];
     const version = header[1];
@@ -89,7 +89,7 @@ pub fn loadIndexedWithStride(
         while (x < preloaded.bytes_per_line) {
             var databyte = blk: {
                 if (in >= input.len) {
-                    const n = try reader.read(input_buffer[0..]);
+                    const n = try reader.read(&input_buffer);
                     if (n == 0) {
                         return error.EndOfStream;
                     }
@@ -103,7 +103,7 @@ pub fn loadIndexedWithStride(
                 runlen = databyte & 0x3f;
                 databyte = blk: {
                     if (in >= input.len) {
-                        const n = try reader.read(input_buffer[0..]);
+                        const n = try reader.read(&input_buffer);
                         if (n == 0) {
                             return error.EndOfStream;
                         }
@@ -188,7 +188,7 @@ pub fn loadRGB(
         return error.PcxLoadFailed;
     }
     var palette: [768]u8 = undefined;
-    try loadIndexedWithStride(reader, preloaded, out_buffer, 3, palette[0..]);
+    try loadIndexedWithStride(reader, preloaded, out_buffer, 3, &palette);
     var i: usize = 0;
     while (i < num_pixels) : (i += 1) {
         const index: usize = out_buffer[i * 3 + 0];
@@ -204,20 +204,20 @@ pub fn loadRGBA(
     transparent_index: ?u8,
     out_buffer: []u8,
 ) !void {
-    const num_pixels = usize(preloaded.width) * usize(preloaded.height);
+    const num_pixels = @as(usize, preloaded.width) * @as(usize, preloaded.height);
     if (out_buffer.len < num_pixels * 4) {
         return error.PcxLoadFailed;
     }
     var palette: [768]u8 = undefined;
-    try loadIndexedWithStride(reader, preloaded, out_buffer, 4, palette[0..]);
+    try loadIndexedWithStride(reader, preloaded, out_buffer, 4, &palette);
     var i: usize = 0;
     while (i < num_pixels) : (i += 1) {
-        const index = usize(out_buffer[i * 4 + 0]);
+        const index: usize = out_buffer[i * 4 + 0];
         out_buffer[i * 4 + 0] = palette[index * 3 + 0];
         out_buffer[i * 4 + 1] = palette[index * 3 + 1];
         out_buffer[i * 4 + 2] = palette[index * 3 + 2];
         out_buffer[i * 4 + 3] =
-            if ((transparent_index orelse ~index) == index) u8(0) else u8(255);
+            if ((transparent_index orelse ~index) == index) 0 else 255;
     }
 }
 
@@ -287,13 +287,13 @@ pub fn saveIndexed(
             }
             // encode run
             const runlen = @intCast(u8, x - old_x);
-            if (runlen > 1 or (index & 0xC0) == 0xC0) {
-                try writer.writeByte(runlen | 0xC0);
+            if (runlen > 1 or (index & 0xc0) == 0xc0) {
+                try writer.writeByte(runlen | 0xc0);
             }
             try writer.writeByte(index);
         }
     }
 
-    try writer.writeByte(0x0C);
+    try writer.writeByte(0x0c);
     try writer.writeAll(palette);
 }
