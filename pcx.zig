@@ -6,14 +6,14 @@ pub const PreloadedInfo = struct {
     bytes_per_line: u16,
 };
 
-pub fn Loader(comptime InStream: type) type {
+pub fn Loader(comptime Reader: type) type {
     return struct {
         const Self = @This();
 
-        pub fn preload(stream: *InStream) !PreloadedInfo {
+        pub fn preload(reader: *Reader) !PreloadedInfo {
             var header: [70]u8 = undefined;
-            _ = try stream.readNoEof(header[0..]);
-            try stream.skipBytes(58, .{});
+            _ = try reader.readNoEof(header[0..]);
+            try reader.skipBytes(58, .{});
             const manufacturer = header[0];
             const version = header[1];
             if (manufacturer != 0x0a or version != 5) {
@@ -47,16 +47,16 @@ pub fn Loader(comptime InStream: type) type {
         }
 
         pub fn loadIndexed(
-            stream: *InStream,
+            reader: *Reader,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
             out_palette: ?[]u8,
         ) !void {
-            try loadIndexedWithStride(stream, preloaded, out_buffer, 1, out_palette);
+            try loadIndexedWithStride(reader, preloaded, out_buffer, 1, out_palette);
         }
 
         pub fn loadIndexedWithStride(
-            stream: *InStream,
+            reader: *Reader,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
             out_buffer_stride: usize,
@@ -90,7 +90,7 @@ pub fn Loader(comptime InStream: type) type {
                 while (x < preloaded.bytes_per_line) {
                     var databyte = blk: {
                         if (in >= input.len) {
-                            const n = try stream.read(input_buffer[0..]);
+                            const n = try reader.read(input_buffer[0..]);
                             if (n == 0) {
                                 return error.EndOfStream;
                             }
@@ -104,7 +104,7 @@ pub fn Loader(comptime InStream: type) type {
                         runlen = databyte & 0x3f;
                         databyte = blk: {
                             if (in >= input.len) {
-                                const n = try stream.read(input_buffer[0..]);
+                                const n = try reader.read(input_buffer[0..]);
                                 if (n == 0) {
                                     return error.EndOfStream;
                                 }
@@ -152,7 +152,7 @@ pub fn Loader(comptime InStream: type) type {
                     std.mem.copy(u8, page_bufs[which_page][0..n], input[in..]);
                     in = input.len;
                 }
-                n += try stream.read(page_bufs[which_page][n..]);
+                n += try reader.read(page_bufs[which_page][n..]);
                 pages[which_page] = page_bufs[which_page][0..n];
                 if (n < 768) {
                     // reached EOF
@@ -180,7 +180,7 @@ pub fn Loader(comptime InStream: type) type {
         }
 
         pub fn loadRGB(
-            stream: *InStream,
+            reader: *Reader,
             preloaded: PreloadedInfo,
             out_buffer: []u8,
         ) !void {
@@ -189,7 +189,7 @@ pub fn Loader(comptime InStream: type) type {
                 return error.PcxLoadFailed;
             }
             var palette: [768]u8 = undefined;
-            try loadIndexedWithStride(stream, preloaded, out_buffer, 3, palette[0..]);
+            try loadIndexedWithStride(reader, preloaded, out_buffer, 3, palette[0..]);
             var i: usize = 0;
             while (i < num_pixels) : (i += 1) {
                 const index: usize = out_buffer[i * 3 + 0];
@@ -200,7 +200,7 @@ pub fn Loader(comptime InStream: type) type {
         }
 
         pub fn loadRGBA(
-            stream: *InStream,
+            reader: *Reader,
             preloaded: PreloadedInfo,
             transparent_index: ?u8,
             out_buffer: []u8,
@@ -210,7 +210,7 @@ pub fn Loader(comptime InStream: type) type {
                 return error.PcxLoadFailed;
             }
             var palette: [768]u8 = undefined;
-            try loadIndexedWithStride(stream, preloaded, out_buffer, 4, palette[0..]);
+            try loadIndexedWithStride(reader, preloaded, out_buffer, 4, palette[0..]);
             var i: usize = 0;
             while (i < num_pixels) : (i += 1) {
                 const index = usize(out_buffer[i * 4 + 0]);
@@ -224,15 +224,15 @@ pub fn Loader(comptime InStream: type) type {
     };
 }
 
-pub fn Saver(comptime OutStream: type) type {
+pub fn Saver(comptime Writer: type) type {
     return struct {
         const Self = @This();
 
-        stream: *OutStream,
+        writer: *Writer,
 
-        pub fn init(stream: *OutStream) Self {
+        pub fn init(writer: *Writer) Self {
             return .{
-                .stream = stream,
+                .writer = writer,
             };
         }
 
@@ -243,7 +243,7 @@ pub fn Saver(comptime OutStream: type) type {
             pixels: []const u8,
             palette: []const u8,
         ) !void {
-            const stream = self.stream;
+            const writer = self.writer;
             if (width < 1 or
                 width > 65535 or
                 height < 1 or
@@ -283,7 +283,7 @@ pub fn Saver(comptime OutStream: type) type {
             header[68] = @intCast(u8, palette_type & 0xff);
             header[69] = @intCast(u8, palette_type >> 8);
             std.mem.set(u8, header[70..128], 0);
-            try stream.writeAll(&header);
+            try writer.writeAll(&header);
 
             var y: usize = 0;
             while (y < height) : (y += 1) {
@@ -304,24 +304,24 @@ pub fn Saver(comptime OutStream: type) type {
                     // encode run
                     const runlen = @intCast(u8, x - old_x);
                     if (runlen > 1 or (index & 0xC0) == 0xC0) {
-                        try stream.writeByte(runlen | 0xC0);
+                        try writer.writeByte(runlen | 0xC0);
                     }
-                    try stream.writeByte(index);
+                    try writer.writeByte(index);
                 }
             }
 
-            try stream.writeByte(0x0C);
-            try stream.writeAll(palette);
+            try writer.writeByte(0x0C);
+            try writer.writeAll(palette);
         }
     };
 }
 
-pub fn saver(stream: anytype) Saver(switch (@typeInfo(@TypeOf(stream))) {
+pub fn saver(writer: anytype) Saver(switch (@typeInfo(@TypeOf(writer))) {
     .Pointer => |p| p.child,
-    else => @compileError("saver: stream must be a pointer"),
+    else => @compileError("pcx.saver: writer must be a pointer"),
 }) {
-    return Saver(switch (@typeInfo(@TypeOf(stream))) {
+    return Saver(switch (@typeInfo(@TypeOf(writer))) {
         .Pointer => |p| p.child,
         else => unreachable,
-    }).init(stream);
+    }).init(writer);
 }

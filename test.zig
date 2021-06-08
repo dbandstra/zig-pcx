@@ -16,28 +16,25 @@ fn test_load_comptime(
 
         const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
         var fbs = std.io.fixedBufferStream(pcxfile);
-        var stream = fbs.inStream();
-        const Loader = pcx.Loader(@TypeOf(stream));
+        var reader = fbs.reader();
+        const Loader = pcx.Loader(@TypeOf(reader));
 
-        const preloaded = try Loader.preload(&stream);
+        const preloaded = try Loader.preload(&reader);
         const width: usize = preloaded.width;
         const height: usize = preloaded.height;
 
         if (indexed) {
             var pixels: [width * height]u8 = undefined;
             var palette: [768]u8 = undefined;
-            try Loader.loadIndexed(&stream, preloaded, &pixels, &palette);
+            try Loader.loadIndexed(&reader, preloaded, &pixels, &palette);
 
-            std.testing.expect(std.mem.eql(u8, &pixels,
-                @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
-            std.testing.expect(std.mem.eql(u8, &palette,
-                @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
+            try std.testing.expect(std.mem.eql(u8, &pixels, @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
+            try std.testing.expect(std.mem.eql(u8, &palette, @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
         } else {
             var pixels: [width * height * 3]u8 = undefined;
-            try Loader.loadRGB(&stream, preloaded, &pixels);
+            try Loader.loadRGB(&reader, preloaded, &pixels);
 
-            std.testing.expect(std.mem.eql(u8, &pixels,
-                @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
+            try std.testing.expect(std.mem.eql(u8, &pixels, @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
         }
     }
 }
@@ -46,7 +43,7 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
     defer gfa.end_index = 0;
 
     const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
-    var stream = std.io.fixedBufferStream(pcxfile).inStream();
+    var stream = std.io.fixedBufferStream(pcxfile).reader();
     const Loader = pcx.Loader(@TypeOf(stream));
 
     const preloaded = try Loader.preload(&stream);
@@ -58,16 +55,13 @@ fn test_load_runtime(comptime basename: []const u8, indexed: bool) !void {
         var palette: [768]u8 = undefined;
         try Loader.loadIndexed(&stream, preloaded, pixels, &palette);
 
-        std.testing.expect(std.mem.eql(u8, pixels,
-            @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
-        std.testing.expect(std.mem.eql(u8, &palette,
-            @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
+        try std.testing.expect(std.mem.eql(u8, pixels, @embedFile("testdata/" ++ basename ++ "-raw-indexed.data")));
+        try std.testing.expect(std.mem.eql(u8, &palette, @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal")));
     } else {
         var rgb = try gfa.allocator.alloc(u8, width * height * 3);
         try Loader.loadRGB(&stream, preloaded, rgb);
 
-        std.testing.expect(std.mem.eql(u8, rgb,
-            @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
+        try std.testing.expect(std.mem.eql(u8, rgb, @embedFile("testdata/" ++ basename ++ "-raw-r8g8b8.data")));
     }
 }
 
@@ -152,21 +146,24 @@ fn test_save(comptime basename: []const u8, w: usize, h: usize) !void {
 
     var outbuf: [pcxfile.len]u8 = undefined;
     var slice_stream = std.io.fixedBufferStream(&outbuf);
-    var stream = slice_stream.outStream();
+    var stream = slice_stream.writer();
     const saver = pcx.saver(&stream);
 
-    try saver.saveIndexed(w, h,
+    try saver.saveIndexed(
+        w,
+        h,
         @embedFile("testdata/" ++ basename ++ "-raw-indexed.data"),
-        @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal"));
+        @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal"),
+    );
 
     const result = slice_stream.getWritten();
 
-    std.testing.expect(
+    try std.testing.expect(
         std.mem.eql(u8, result[0..12], pcxfile[0..12]) and
-        // skip hres, vres, reserved
-        std.mem.eql(u8, result[65..70], pcxfile[65..70]) and
-        // skip padding
-        std.mem.eql(u8, result[128..], pcxfile[128..]),
+            // skip hres, vres, reserved
+            std.mem.eql(u8, result[65..70], pcxfile[65..70]) and
+            // skip padding
+            std.mem.eql(u8, result[128..], pcxfile[128..]),
     );
 }
 
