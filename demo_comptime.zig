@@ -1,6 +1,17 @@
 const std = @import("std");
 const pcx = @import("pcx.zig");
-const util = @import("demoutil.zig");
+
+const grey10 = " .:-=+*#%@"; // http://paulbourke.net/dataformats/asciiart/
+
+fn grayscale(pixel: [3]u8) u8 {
+    const r = @intToFloat(f32, pixel[0]) / 255.0;
+    const g = @intToFloat(f32, pixel[1]) / 255.0;
+    const b = @intToFloat(f32, pixel[2]) / 255.0;
+    const grey = 0.21 * r + 0.72 * g + 0.07 * b;
+    const shade256 = @floatToInt(u8, grey * 255);
+    const quant = @divFloor(shade256, 26);
+    return grey10[9 - quant];
+}
 
 pub fn main() void {
     comptime {
@@ -10,26 +21,32 @@ pub fn main() void {
         var fbs = std.io.fixedBufferStream(input);
         var reader = fbs.reader();
 
+        // load the image
         const preloaded = try pcx.preload(reader);
-        var rgb: [preloaded.width * preloaded.height * 3]u8 = undefined;
+        const w: usize = preloaded.width;
+        const h: usize = preloaded.height;
+        var rgb: [w * h * 3]u8 = undefined;
         try pcx.loadRGB(reader, preloaded, &rgb);
 
-        var greyscale: [preloaded.width * preloaded.height]u8 = undefined;
-        util.convertToGreyscale(&rgb, &greyscale);
-        var string: [(preloaded.width + 1) * preloaded.height]u8 = undefined;
+        // convert the image to an ASCII string, skipping every other row to
+        // roughly accommodate the tall proportion of font characters. add
+        // one to the width to fit newline characters
+        var ascii: [(w + 1) * (h / 2)]u8 = undefined;
+
         var i: usize = 0;
         var y: usize = 0;
-        while (y < preloaded.height) : (y += 1) {
-            string[i] = '\n';
+        while (y < h) : (y += 2) {
+            ascii[i] = '\n';
             i += 1;
             var x: usize = 0;
-            while (x < preloaded.width) : (x += 1) {
-                const shade256 = greyscale[y * preloaded.width + x];
-                const quant = @divFloor(shade256, 26);
-                string[i] = util.grey10[9 - quant];
+            while (x < w) : (x += 1) {
+                const index = (y * w + x) * 3;
+                ascii[i] = grayscale(rgb[index..][0..3].*);
                 i += 1;
             }
         }
-        @compileError(&string);
+
+        // print the image as a compile error
+        @compileError(&ascii);
     }
 }

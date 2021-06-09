@@ -1,37 +1,43 @@
 const std = @import("std");
 const pcx = @import("pcx.zig");
-const util = @import("demoutil.zig");
+
+const grey10 = " .:-=+*#%@"; // http://paulbourke.net/dataformats/asciiart/
+
+fn grayscale(pixel: [3]u8) u8 {
+    const r = @intToFloat(f32, pixel[0]) / 255.0;
+    const g = @intToFloat(f32, pixel[1]) / 255.0;
+    const b = @intToFloat(f32, pixel[2]) / 255.0;
+    const grey = 0.21 * r + 0.72 * g + 0.07 * b;
+    const shade256 = @floatToInt(u8, grey * 255);
+    const quant = @divFloor(shade256, 26);
+    return grey10[9 - quant];
+}
 
 pub fn main() !void {
     const allocator = std.testing.allocator;
+    const stdout = std.io.getStdOut().writer();
 
     var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});
     defer file.close();
-
     var reader = file.reader();
 
+    // load the image
     const preloaded = try pcx.preload(reader);
-    var rgb = try allocator.alloc(u8, preloaded.width * preloaded.height * 3);
-    try pcx.loadRGB(reader, preloaded, rgb);
+    const w: usize = preloaded.width;
+    const h: usize = preloaded.height;
+    var rgb = try allocator.alloc(u8, w * h * 3);
     defer allocator.free(rgb);
+    try pcx.loadRGB(reader, preloaded, rgb);
 
-    var greyscale = try allocator.alloc(u8, preloaded.width * preloaded.height);
-    defer allocator.free(greyscale);
-    util.convertToGreyscale(rgb, greyscale[0..]);
-    var string = try allocator.alloc(u8, (preloaded.width + 1) * preloaded.height);
-    defer allocator.free(string);
-    var i: usize = 0;
+    // print the image to the terminal, skipping every other row to
+    // roughly accommodate the tall proportion of font characters
     var y: usize = 0;
-    while (y < preloaded.height) : (y += 1) {
-        string[i] = '\n';
-        i += 1;
+    while (y < h) : (y += 2) {
         var x: usize = 0;
-        while (x < preloaded.width) : (x += 1) {
-            const shade256 = greyscale[y * preloaded.width + x];
-            const quant = @divFloor(shade256, 26);
-            string[i] = util.grey10[9 - quant];
-            i += 1;
+        while (x < w) : (x += 1) {
+            const index = (y * w + x) * 3;
+            try stdout.writeByte(grayscale(rgb[index..][0..3].*));
         }
+        try stdout.writeByte('\n');
     }
-    std.debug.warn("{s}\n", .{string});
 }
