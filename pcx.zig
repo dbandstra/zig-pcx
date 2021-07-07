@@ -21,12 +21,12 @@ pub fn preload(reader: anytype) !PreloadedInfo {
     const ymin = @as(u16, header[6]) | (@as(u16, header[7]) << 8);
     const xmax = @as(u16, header[8]) | (@as(u16, header[9]) << 8);
     const ymax = @as(u16, header[10]) | (@as(u16, header[11]) << 8);
-    const hres = @as(u16, header[12]) | (@as(u16, header[13]) << 8);
-    const vres = @as(u16, header[14]) | (@as(u16, header[15]) << 8);
-    const reserved = header[64];
+    // const hres = @as(u16, header[12]) | (@as(u16, header[13]) << 8);
+    // const vres = @as(u16, header[14]) | (@as(u16, header[15]) << 8);
+    // const reserved = header[64];
     const color_planes = header[65];
     const bytes_per_line = @as(u16, header[66]) | (@as(u16, header[67]) << 8);
-    const palette_type = @as(u16, header[68]) | (@as(u16, header[69]) << 8);
+    // const palette_type = @as(u16, header[68]) | (@as(u16, header[69]) << 8);
     if (encoding != 1 or
         bits_per_pixel != 8 or
         xmin > xmax or
@@ -237,7 +237,6 @@ pub fn saveIndexed(
     {
         return error.PcxWriteFailed;
     }
-    var i: usize = undefined;
     const xmax = @intCast(u16, width - 1);
     const ymax = @intCast(u16, height - 1);
     const bytes_per_line = @intCast(u16, width);
