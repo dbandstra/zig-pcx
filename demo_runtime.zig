@@ -1,20 +1,23 @@
 const std = @import("std");
 const pcx = @import("pcx.zig");
 
+var mem: [1000 * 1024]u8 = undefined;
+var gfa = std.heap.FixedBufferAllocator.init(&mem);
+
 const grey10 = " .:-=+*#%@"; // http://paulbourke.net/dataformats/asciiart/
 
 fn grayscale(pixel: [3]u8) u8 {
-    const r = @intToFloat(f32, pixel[0]) / 255.0;
-    const g = @intToFloat(f32, pixel[1]) / 255.0;
-    const b = @intToFloat(f32, pixel[2]) / 255.0;
+    const r = @as(f32, @floatFromInt(pixel[0])) / 255.0;
+    const g = @as(f32, @floatFromInt(pixel[1])) / 255.0;
+    const b = @as(f32, @floatFromInt(pixel[2])) / 255.0;
     const grey = 0.21 * r + 0.72 * g + 0.07 * b;
-    const shade256 = @floatToInt(u8, grey * 255);
+    const shade256: u8 = @intFromFloat(grey * 255);
     const quant = @divFloor(shade256, 26);
     return grey10[9 - quant];
 }
 
 pub fn main() !void {
-    const allocator = std.testing.allocator;
+    const allocator = gfa.allocator();
     const stdout = std.io.getStdOut().writer();
 
     var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});

@@ -237,9 +237,9 @@ pub fn saveIndexed(
     {
         return error.PcxWriteFailed;
     }
-    const xmax = @intCast(u16, width - 1);
-    const ymax = @intCast(u16, height - 1);
-    const bytes_per_line = @intCast(u16, width);
+    const xmax: u16 = @intCast(width - 1);
+    const ymax: u16 = @intCast(height - 1);
+    const bytes_per_line: u16 = @intCast(width);
     const palette_type: u16 = 1;
     var header: [128]u8 = undefined;
     header[0] = 0x0a; // manufacturer
@@ -250,22 +250,22 @@ pub fn saveIndexed(
     header[5] = 0; // xmin
     header[6] = 0;
     header[7] = 0; // ymin
-    header[8] = @intCast(u8, xmax & 0xff);
-    header[9] = @intCast(u8, xmax >> 8);
-    header[10] = @intCast(u8, ymax & 0xff);
-    header[11] = @intCast(u8, ymax >> 8);
+    header[8] = @intCast(xmax & 0xff);
+    header[9] = @intCast(xmax >> 8);
+    header[10] = @intCast(ymax & 0xff);
+    header[11] = @intCast(ymax >> 8);
     header[12] = 0;
     header[13] = 0; // hres
     header[14] = 0;
     header[15] = 0; // vres
-    std.mem.set(u8, header[16..64], 0);
+    @memset(header[16..64], 0);
     header[64] = 0; // reserved
     header[65] = 1; // color planes
-    header[66] = @intCast(u8, bytes_per_line & 0xff);
-    header[67] = @intCast(u8, bytes_per_line >> 8);
-    header[68] = @intCast(u8, palette_type & 0xff);
-    header[69] = @intCast(u8, palette_type >> 8);
-    std.mem.set(u8, header[70..128], 0);
+    header[66] = @intCast(bytes_per_line & 0xff);
+    header[67] = @intCast(bytes_per_line >> 8);
+    header[68] = @intCast(palette_type & 0xff);
+    header[69] = @intCast(palette_type >> 8);
+    @memset(header[70..128], 0);
     try writer.writeAll(&header);
 
     var y: usize = 0;
@@ -285,7 +285,7 @@ pub fn saveIndexed(
                 x += 1;
             }
             // encode run
-            const runlen = @intCast(u8, x - old_x);
+            const runlen: u8 = @intCast(x - old_x);
             if (runlen > 1 or (index & 0xc0) == 0xc0) {
                 try writer.writeByte(runlen | 0xc0);
             }

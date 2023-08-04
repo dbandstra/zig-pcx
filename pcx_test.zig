@@ -54,14 +54,15 @@ fn testLoadRuntime(comptime basename: []const u8, indexed: bool) !void {
     defer gfa.end_index = 0;
 
     const pcxfile = @embedFile("testdata/" ++ basename ++ ".pcx");
-    var reader = std.io.fixedBufferStream(pcxfile).reader();
+    var fbs = std.io.fixedBufferStream(pcxfile);
+    const reader = fbs.reader();
 
     const preloaded = try pcx.preload(reader);
     const width: usize = preloaded.width;
     const height: usize = preloaded.height;
 
     if (indexed) {
-        var pixels = try gfa.allocator.alloc(u8, width * height);
+        var pixels = try gfa.allocator().alloc(u8, width * height);
         var palette: [768]u8 = undefined;
         try pcx.loadIndexed(reader, preloaded, pixels, &palette);
 
@@ -76,7 +77,7 @@ fn testLoadRuntime(comptime basename: []const u8, indexed: bool) !void {
             @embedFile("testdata/" ++ basename ++ "-raw-indexed.data.pal"),
         ));
     } else {
-        var rgb = try gfa.allocator.alloc(u8, width * height * 3);
+        var rgb = try gfa.allocator().alloc(u8, width * height * 3);
         try pcx.loadRGB(reader, preloaded, rgb);
 
         try std.testing.expect(std.mem.eql(
