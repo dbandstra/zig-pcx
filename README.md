@@ -3,7 +3,7 @@
 One-file library ([pcx.zig](pcx.zig)) for loading and saving 8-bit PCX images
 in Zig; works both at compile-time and at run-time.
 
-Requires Zig 0.8.0.
+Requires Zig 0.11.0.
 
 ## Loading
 
