@@ -19,7 +19,7 @@ pub fn main() void {
 
         const input = @embedFile("testdata/space_merc.pcx");
         var fbs = std.io.fixedBufferStream(input);
-        var reader = fbs.reader();
+        const reader = fbs.reader();
 
         // load the image
         const preloaded = try pcx.preload(reader);

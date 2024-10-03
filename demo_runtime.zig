@@ -22,13 +22,13 @@ pub fn main() !void {
 
     var file = try std.fs.cwd().openFile("testdata/space_merc.pcx", .{});
     defer file.close();
-    var reader = file.reader();
+    const reader = file.reader();
 
     // load the image
     const preloaded = try pcx.preload(reader);
     const w: usize = preloaded.width;
     const h: usize = preloaded.height;
-    var rgb = try allocator.alloc(u8, w * h * 3);
+    const rgb = try allocator.alloc(u8, w * h * 3);
     defer allocator.free(rgb);
     try pcx.loadRGB(reader, preloaded, rgb);
 

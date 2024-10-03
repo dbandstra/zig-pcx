@@ -148,7 +148,7 @@ pub fn loadIndexedWithStride(
             // some left over buffered data from the image data loading (this
             // will only happen on the first iteration)
             n = input.len - in;
-            std.mem.copy(u8, page_bufs[which_page][0..n], input[in..]);
+            @memcpy(page_bufs[which_page][0..n], input[in..]);
             in = input.len;
         }
         n += try reader.read(page_bufs[which_page][n..]);
@@ -173,8 +173,8 @@ pub fn loadIndexedWithStride(
     const cur_len = cur_page.len;
     const opp_len = 768 - cur_len;
     if (out_palette) |pal| {
-        std.mem.copy(u8, pal[0..opp_len], opp_page[cur_len..768]);
-        std.mem.copy(u8, pal[opp_len..768], cur_page);
+        @memcpy(pal[0..opp_len], opp_page[cur_len..768]);
+        @memcpy(pal[opp_len..768], cur_page);
     }
 }
 
